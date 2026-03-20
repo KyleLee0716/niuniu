@@ -59,7 +59,7 @@ wss.on('connection', ws => {
         code, host: ws.playerId,
         bet: payload.bet || 10,
         clients: new Set([ws]),
-        players: [{ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false }],
+        players: [{ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false, avatar: payload.avatar || 0 }],
         phase: 'lobby',
         hands: {}, confirmed: {}, round: 0
       };
@@ -74,7 +74,7 @@ wss.on('connection', ws => {
       if (room.players.length >= 10) { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '房间已满' } })); return; }
       room.clients.add(ws);
       ws.roomCode = payload.code;
-      room.players.push({ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false });
+      room.players.push({ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false, avatar: payload.avatar || 0 });
       ws.send(JSON.stringify({ type: 'ROOM_JOINED', payload: { room: sanitize(room) } }));
       broadcast(room, { type: 'ROOM_UPDATE', payload: { room: sanitize(room) } }, ws);
     }
@@ -131,6 +131,13 @@ wss.on('connection', ws => {
           }));
         }
       });
+    }
+
+    else if (type === 'CHAT') {
+      const room = rooms[ws.roomCode]; if (!room) return;
+      const p = room.players.find(p => p.id === ws.playerId);
+      if (!p) return;
+      broadcastAll(room, { type: 'CHAT', payload: { id: ws.playerId, name: p.name, avatar: p.avatar || 0, text: payload.text } });
     }
 
     else if (type === 'PING') {
