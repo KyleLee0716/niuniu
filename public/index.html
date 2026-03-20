@@ -144,7 +144,7 @@ function cmpH(a,b){
 // ── State ──
 let ws=null, myId=null, G={
   screen:'home', room:null, myHand:null, sel:[], alert5:null,
-  showHint:false, showGiveup:false, timeLeft:20, timer:null,
+  showHint:false, showGiveup:false, timeLeft:30, timer:null,
   confirmedIds:[], confirmed:{}, delta:{}, vsLog:[], autoPlayed:false,
   name:'', bet:10
 };
@@ -196,7 +196,7 @@ function handleMsg(msg){
     clearInterval(G.timer);
     G.room=payload.room;G.myHand=payload.myHand;
     G.sel=[];G.alert5=null;G.showHint=false;G.showGiveup=false;
-    G.confirmedIds=[];G.timeLeft=20;G.autoPlayed=false;
+    G.confirmedIds=[];G.timeLeft=30;G.autoPlayed=false;
     const t5=check5(G.myHand);
     if(t5){G.alert5=t5;G.sel=[0,1,2];}
     G.screen='arrange';render();
