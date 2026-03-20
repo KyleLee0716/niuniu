@@ -58,6 +58,7 @@ wss.on('connection', ws => {
       rooms[code] = {
         code, host: ws.playerId,
         bet: payload.bet || 10,
+        startChips: payload.chips || 500,
         clients: new Set([ws]),
         players: [{ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false, avatar: payload.avatar || 0 }],
         phase: 'lobby',
@@ -91,8 +92,9 @@ wss.on('connection', ws => {
       if (room.players.length < 2) { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '至少需要2人' } })); return; }
       const deck = makeDeck();
       room.hands = {}; room.confirmed = {}; room.phase = 'arrange'; room.round++;
-      room.players.forEach(p => { p.ready = false; room.hands[p.id] = deck.splice(0, 5); });
       if (payload && payload.bet) room.bet = payload.bet;
+      if (payload && payload.chips) room.startChips = payload.chips;
+      room.players.forEach(p => { p.ready = false; p.chips = room.startChips || 500; room.hands[p.id] = deck.splice(0, 5); });
       // send each player their own hand
       room.clients.forEach(ws2 => {
         if (ws2.readyState === WebSocket.OPEN) {
@@ -156,7 +158,7 @@ wss.on('connection', ws => {
 });
 
 function sanitize(room) {
-  return { code: room.code, host: room.host, bet: room.bet, phase: room.phase, round: room.round, players: room.players, confirmedIds: Object.keys(room.confirmed) };
+  return { code: room.code, host: room.host, bet: room.bet, startChips: room.startChips||500, phase: room.phase, round: room.round, players: room.players, confirmedIds: Object.keys(room.confirmed) };
 }
 
 const RO = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
