@@ -242,7 +242,7 @@ function handleMsg(msg){
     G.room=payload.room;G.myHand=payload.myHand;
     G.sel=[];G.alert5=null;G.showHint=false;G.showGiveup=false;
     G.confirmedIds=[];G.timeLeft=30;G.autoPlayed=false;
-    G.confirmed={};G.delta={};G.vsLog={};G.revealIdx=0;G.revealDone=false;G.revealOrder=[];
+    G.confirmed={};G.delta={};G.vsLog=[];G.revealIdx=0;G.revealDone=false;G.revealOrder=[];G.animatedSet=new Set();clearInterval(G.revealTimer);
     const t5=check5(G.myHand);if(t5){G.alert5=t5;G.sel=[0,1,2];}
     G.screen='arrange';render();
     G.timer=setInterval(()=>{
@@ -309,17 +309,19 @@ function startReveal(){
       const newId=G.revealOrder[G.revealIdx];
       G.revealIdx++;
       render();
-      // only flip the newest player's cards
+      // flip only the new player's cards, then mark as animated
       setTimeout(()=>{
         document.querySelectorAll('.flip-new').forEach(el=>{
           const delay=parseInt(el.dataset.delay)||0;
-          setTimeout(()=>{el.classList.add('done');},delay);
+          setTimeout(()=>el.classList.add('done'),delay);
         });
-        G.animatedSet.add(newId);
+        // mark AFTER animation starts so next render uses mkOpen
+        setTimeout(()=>G.animatedSet.add(newId), 800);
       },60);
       if(G.revealIdx===G.revealOrder.length){
         clearInterval(G.revealTimer);
-        setTimeout(()=>{G.revealDone=true;render();launchConfetti();},1000);
+        // wait for last flip to complete, THEN show settlement (all mkOpen by then)
+        setTimeout(()=>{G.revealDone=true;render();launchConfetti();},1800);
       }
     }
   },1900);
@@ -519,7 +521,7 @@ function renderReveal(){
     const cl=ev.label.replace(/\s*\[.+\]/,'');
     const nm=ev.label.match(/\[(.+)\]/);
     const is5=ev.rank>=5&&ev.rank<=10;
-    const isNew=!G.revealDone&&ri===revealedIds.length-1;
+    const isNew=!G.revealDone&&ri===revealedIds.length-1&&!(G.animatedSet&&G.animatedSet.has(id));
     let cardsSection='';
     if(!h||h.giveup){
       cardsSection='<div style="color:#aaa;font-size:13px;padding:8px 0;">已放弃出牌</div>';
@@ -588,7 +590,10 @@ function renderReveal(){
     +pendingHtml+revealedHtml+settlHtml+'</div>';
 }
 
-function nextRound(){send('NEXT_ROUND',{});}
+function nextRound(){
+  clearInterval(G.revealTimer);
+  send('NEXT_ROUND',{});
+}
 
 window.onload=()=>{
   const params=new URLSearchParams(location.search);
