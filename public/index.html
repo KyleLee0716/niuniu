@@ -555,3 +555,247 @@ window.onload=()=>{
 </script>
 </body>
 </html>
+  let hint='';
+  if(!G.alert5&&G.showHint){
+    const a=bestArr(hand);
+    if(a){const cl=a.label.replace(/\s*\[.+\]/,'');const nm=a.label.match(/\[(.+)\]/);
+      hint=`<div class="preview" style="border:1.5px solid #85B7EB;margin-top:8px;">
+        <b style="color:#0C447C;">提示</b> 推荐：<span class="badge bg-blue">${cl}</span>${nm?` <span class="badge" style="background:#E1F5EE;color:#085041;">${nm[1]}</span>`:''} ${a.mult}x
+        <button class="btn-blue btn-small" onclick="applyAuto()" style="margin-left:8px;">一键应用</button>
+      </div>`;}
+    else hint=`<div class="warn-box">此手牌无法凑出任何牛牌。</div>`;
+  }
+  const canConfirm=!G.alert5&&sel.length===3&&canFormNiu(sel.map(i=>hand[i]));
+  let giveupHtml='';
+  if(G.showGiveup){
+    giveupHtml=`<div style="background:#FCEBEB;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;color:#791F1F;">
+      确定放弃本局？
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-red btn-small" onclick="doGiveup()">确认放弃</button>
+        <button class="btn-outline btn-small" onclick="G.showGiveup=false;render()">取消</button>
+      </div>
+    </div>`;
+  }
+  const done=G.confirmedIds.length,total=G.room.players.length;
+  const me=G.room.players.find(p=>p.id===myId);
+  return`<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${avatarHtml(me?.avatar||0)}
+        <div>
+          <div style="font-size:16px;font-weight:700;">${G.alert5?'检测到5张牌型！':'选3张放下方'}</div>
+          <div style="font-size:12px;color:#888;">底注 ${G.room.bet} · ${done}/${total} 人已出牌</div>
+        </div>
+      </div>
+      <div id="timerEl" class="timer${G.timeLeft<=5?' urgent':''}">${G.timeLeft}</div>
+    </div>
+    ${alert5Html}
+    ${G.alert5?'':`<div class="card">
+      <div class="hand-row">${cardEls}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">已选 ${sel.length}/3 张</div>
+      ${preview}${hint}${giveupHtml}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${canConfirm?`<button class="btn-green" style="flex:1;" onclick="confirmHand()">确认出牌</button>`:''}
+      ${sel.length>0?`<button class="btn-outline" onclick="G.sel=[];render()">重选</button>`:''}
+      <button class="btn-blue" onclick="G.showHint=!G.showHint;render()">${G.showHint?'隐藏提示':'提示'}</button>
+      ${!G.showGiveup?`<button class="btn-red btn-small" onclick="G.showGiveup=true;render()">放弃</button>`:''}
+    </div>`}
+  </div>`;
+}
+
+function toggleCard(i){const s=G.sel,x=s.indexOf(i);if(x>=0)s.splice(x,1);else if(s.length<3)s.push(i);render();}
+function applyAuto(){const a=bestArr(G.myHand);if(a){G.sel=a.bottomIdx;G.showHint=false;render();}}
+function accept5(){
+  clearInterval(G.timer);const h=G.myHand;
+  send('CONFIRM_HAND',{bottom:[h[0],h[1],h[2]],top:[h[3],h[4]],giveup:false});
+  G.screen='waiting';render();
+}
+function dismiss5(){G.alert5=null;G.sel=[];render();}
+function confirmHand(){
+  clearInterval(G.timer);const hand=G.myHand,sel=G.sel;
+  send('CONFIRM_HAND',{bottom:sel.map(i=>hand[i]),top:hand.filter((_,i)=>!sel.includes(i)),giveup:false});
+  G.screen='waiting';render();
+}
+function doGiveup(){
+  clearInterval(G.timer);send('CONFIRM_HAND',{giveup:true});G.screen='waiting';render();
+}
+
+function renderWaiting(){
+  const done=G.confirmedIds.length,total=G.room?.players.length||1;
+  const pct=Math.round(done/total*100);
+  const ps=G.room?.players||[];
+  const rows=ps.map(p=>{
+    const isDone=G.confirmedIds.includes(p.id);
+    return`<div class="player-row">
+      ${avatarHtml(p.avatar||0)}
+      <span style="flex:1;font-weight:500;">${p.name}${p.id===myId?' (我)':''}</span>
+      <span class="badge ${isDone?'bg-green':'bg-gray'}">${isDone?'已出牌':'思考中...'}</span>
+    </div>`;
+  }).join('');
+  return`<div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px;">等待其他玩家出牌</div>
+    <div style="font-size:13px;color:#888;margin-bottom:14px;">${done} / ${total} 人已完成</div>
+    <div style="background:#eee;border-radius:4px;height:6px;margin-bottom:16px;">
+      <div style="background:#1D9E75;border-radius:4px;height:100%;width:${pct}%;transition:width .4s;"></div>
+    </div>
+    <div class="card">${rows}</div>
+    ${G.autoPlayed?'<div style="background:#E6F1FB;border-radius:10px;padding:10px;font-size:13px;color:#0C447C;">超时！系统已帮你打出最优解。</div>':''}
+  </div>`;
+}
+
+// ── Reveal screen ──
+function renderReveal(){
+  const ps=G.room.players;
+  const revealed=G.revealOrder.slice(0,G.revealIdx);
+  const pending=G.revealOrder.slice(G.revealIdx);
+
+  // rank map
+  const rankMap={};
+  [...G.revealOrder].reverse().forEach((id,i)=>rankMap[id]=i+1);
+
+  let revealedHtml=revealed.map((id,ri)=>{
+    const p=ps.find(p=>p.id===id);
+    const h=G.confirmed[id];
+    const isWinner=ri===revealed.length-1&&G.revealDone;
+    const isLast=ri===revealed.length-1;
+    let ev;
+    if(!h||h.giveup)ev={label:'放弃',mult:0,rank:0,giveup:true};
+    else ev=evalHand(h.bottom,h.top);
+    const cl=ev.label.replace(/\s*\[.+\]/,''),nm=ev.label.match(/\[(.+)\]/);
+    const is5=ev.rank>=5&&ev.rank<=10;
+    const rankNum=rankMap[id];
+    const rankColor=rankNum===1?'#EF9F27':rankNum===2?'#888':rankNum===3?'#CD7F32':'#ddd';
+    const rankText=rankNum===1?'👑':rankNum+'';
+
+    // Build card html with flip animation
+    let cardsHtml='';
+    if(!h||h.giveup){
+      const allC=(G.myHand&&id===myId?G.myHand:ps.map(()=>null)).filter(Boolean);
+      cardsHtml=`<span style="color:#888;font-size:13px;">牌面未知</span>`;
+    } else {
+      const allCards=is5?[...h.bottom,...h.top]:[...h.bottom,...h.top];
+      cardsHtml=allCards.map((c,ci)=>`
+        <div class="flip-card">
+          <div class="flip-card-inner flipped" style="animation-delay:${ci*0.15}s">
+            <div class="flip-card-front">${cardBackHtml()}</div>
+            <div class="flip-card-back-face">${cardHtml(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    return`<div class="reveal-card${isWinner?' winner':''}" style="animation:fadeSlideIn .4s ease;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="rank-badge" style="background:${rankColor};color:${rankNum===1?'#633806':'#fff'};">${rankText}</div>
+        ${avatarHtml(p?.avatar||0,40)}
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;">${p?.name||''}${id===myId?' (我)':''}</div>
+          <div style="font-size:12px;color:#888;">${p?.chips||0} 筹码</div>
+        </div>
+        <span class="badge bg-gold">${cl}</span>
+        ${nm?`<span class="badge" style="background:#E1F5EE;color:#085041;">${nm[1]}</span>`:''}
+        <span style="font-size:13px;color:#888;font-weight:600;">${ev.mult}x</span>
+      </div>
+      ${!h||h.giveup?`<div style="color:#888;font-size:13px;padding:8px 0;">放弃出牌</div>`:`
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          ${is5?`<div><div style="font-size:11px;color:#888;margin-bottom:4px;">5张牌型</div><div class="hand-row" style="margin:0;">${cardsHtml}</div></div>`
+          :`<div><div style="font-size:11px;color:#888;margin-bottom:4px;">下方（入场）</div><div class="hand-row" style="margin:0;">${h.bottom.map((c,ci)=>`
+            <div class="flip-card"><div class="flip-card-inner flipped">
+              <div class="flip-card-front">${cardBackHtml()}</div>
+              <div class="flip-card-back-face">${cardHtml(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')}</div>
+            </div></div>`).join('')}</div></div>
+          <div><div style="font-size:11px;color:#888;margin-bottom:4px;">上方（牌型）</div><div class="hand-row" style="margin:0;">${h.top.map((c,ci)=>`
+            <div class="flip-card"><div class="flip-card-inner flipped">
+              <div class="flip-card-front">${cardBackHtml()}</div>
+              <div class="flip-card-back-face">${cardHtml(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')}</div>
+            </div></div>`).join('')}</div></div>`}
+        </div>`}
+    </div>`;
+  }).join('');
+
+  // pending players (back cards)
+  let pendingHtml=pending.map(id=>{
+    const p=ps.find(p=>p.id===id);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-radius:12px;margin-bottom:8px;border:1px solid #eee;opacity:.6;">
+      ${avatarHtml(p?.avatar||0,36)}
+      <span style="font-weight:600;flex:1;">${p?.name||''}</span>
+      <div style="display:flex;gap:4px;">${[0,1,2,3,4].map(()=>cardBackHtml()).join('')}</div>
+    </div>`;
+  }).join('');
+
+  const showResult=G.revealDone;
+
+  let resultHtml='';
+  if(showResult){
+    const sorted=[...ps].sort((a,b)=>b.chips-a.chips);
+    const mx=Math.max(...ps.map(p=>p.chips),1);
+    const rows=sorted.map((p,ri)=>{
+      const d=G.delta[p.id]||0;
+      const tag=d>0?`<span class="badge bg-green">+${d}</span>`:d<0?`<span class="badge bg-red">${d}</span>`:`<span class="badge bg-gray">±0</span>`;
+      const h=G.confirmed[p.id];
+      let ev;if(!h||h.giveup)ev={label:'放弃',mult:0};else ev=evalHand(h.bottom,h.top);
+      return`<tr ${p.id===myId?'style="background:#f5f5f0;"':''}>
+        <td style="padding:8px 4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${avatarHtml(p.avatar||0,28)}
+            <span style="font-weight:${ri===0?'700':'400'}">${ri===0?'👑 ':''} ${p.name}</span>
+          </div>
+        </td>
+        <td><span class="badge bg-gold">${ev.label.replace(/\s*\[.+\]/,'')}</span></td>
+        <td style="text-align:right;">${p.chips}</td>
+        <td style="text-align:right;">${tag}</td>
+      </tr>`;
+    }).join('');
+    const bars=sorted.map(p=>`
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+          <div style="display:flex;align-items:center;gap:6px;">${avatarHtml(p.avatar||0,20)}<span>${p.name}${p.id===myId?' (我)':''}</span></div>
+          <span style="color:#888;">${p.chips}</span>
+        </div>
+        <div class="chip-bar"><div class="chip-fill" style="width:${Math.round(p.chips/mx*100)}%"></div></div>
+      </div>`).join('');
+    const amHost=G.room.host===myId;
+    resultHtml=`
+      <div class="divider"></div>
+      <div class="card" style="border-color:#1D9E75;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:10px;color:#1D9E75;">筹码结算</div>
+        <table class="result-table">
+          <thead><tr><th>玩家</th><th>牌型</th><th style="text-align:right;">筹码</th><th style="text-align:right;">变化</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="divider"></div>
+        ${bars}
+        <div style="margin-top:12px;">
+          ${amHost?`<button class="btn-green" onclick="nextRound()">下一局</button>`:'<div style="text-align:center;color:#888;font-size:13px;padding:8px;">等待房主开始下一局...</div>'}
+        </div>
+      </div>`;
+  }
+
+  return`<div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px;">
+      ${showResult?'🏆 最终结果':'⏳ 开牌中...'}
+    </div>
+    <div style="font-size:13px;color:#888;margin-bottom:16px;">
+      ${showResult?'结算完成':'从最后一名开始揭晓'}
+    </div>
+    ${pendingHtml}
+    ${revealedHtml}
+    ${resultHtml}
+  </div>`;
+}
+
+function nextRound(){send('NEXT_ROUND',{});}
+
+// Auto-fill room code from URL
+window.onload=()=>{
+  const params=new URLSearchParams(location.search);
+  const code=params.get('code');
+  render();
+  if(code){setTimeout(()=>{const el=document.getElementById('codeInp');if(el){el.value=code;toast(`检测到房间码 ${code}，请选头像和名字后加入`);}},100);}
+};
+</script>
+<style>
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</body>
+</html>
