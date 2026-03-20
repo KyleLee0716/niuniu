@@ -304,24 +304,39 @@ function sendChat(){
 
 function startReveal(){
   G.animatedSet=new Set();
+  // Check if all players giveup - skip animation
+  const allGiveup=G.revealOrder.every(id=>{
+    const h=G.confirmed[id];return !h||h.giveup;
+  });
+  if(allGiveup){
+    G.revealIdx=G.revealOrder.length;
+    G.revealDone=true;
+    render();
+    return;
+  }
   G.revealTimer=setInterval(()=>{
     if(G.revealIdx<G.revealOrder.length){
       const newId=G.revealOrder[G.revealIdx];
+      const h=G.confirmed[newId];
+      const hasCards=h&&!h.giveup;
       G.revealIdx++;
       render();
-      // flip only the new player's cards, then mark as animated
-      setTimeout(()=>{
-        document.querySelectorAll('.flip-new').forEach(el=>{
-          const delay=parseInt(el.dataset.delay)||0;
-          setTimeout(()=>el.classList.add('done'),delay);
-        });
-        // mark AFTER animation starts so next render uses mkOpen
-        setTimeout(()=>G.animatedSet.add(newId), 800);
-      },60);
+      if(hasCards){
+        // flip only the new player's cards, then mark as animated
+        setTimeout(()=>{
+          document.querySelectorAll('.flip-new').forEach(el=>{
+            const delay=parseInt(el.dataset.delay)||0;
+            setTimeout(()=>el.classList.add('done'),delay);
+          });
+          setTimeout(()=>G.animatedSet.add(newId),800);
+        },60);
+      } else {
+        // giveup player - no cards to flip, mark immediately
+        G.animatedSet.add(newId);
+      }
       if(G.revealIdx===G.revealOrder.length){
         clearInterval(G.revealTimer);
-        // wait for last flip to complete, THEN show settlement (all mkOpen by then)
-        setTimeout(()=>{G.revealDone=true;render();launchConfetti();},1800);
+        setTimeout(()=>{G.revealDone=true;render();launchConfetti();},hasCards?1800:400);
       }
     }
   },1900);
