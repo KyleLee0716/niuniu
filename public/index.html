@@ -33,7 +33,7 @@ button{padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weig
 .card-el.black{color:#1a1a1a;}
 .card-el.selected{border-color:#1D9E75;transform:translateY(-12px);background:#E1F5EE;box-shadow:0 6px 16px rgba(29,158,117,0.3);}
 .card-el.highlight5{border-color:#EF9F27;background:#FAEEDA;}
-.card-el.faceup{cursor:default;}
+.card-el.faceup{cursor:default;}.card-el.top-card{border-color:#534AB7;border-width:2px;box-shadow:0 0 0 3px rgba(83,74,183,0.2);transform:scale(1.06);}
 .card-back{display:inline-flex;align-items:center;justify-content:center;width:74px;height:104px;border-radius:10px;border:1.5px solid #aaa;background:#1a237e;font-size:32px;}
 .hand-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:flex-end;}
 .flip-wrap{display:inline-block;}
@@ -187,6 +187,13 @@ function mkFlip(c,extraClass,extraStyle,delayMs){
     +'<div class="flip-back">'+inner+'</div>'
     +'</div></div>';
 }
+function mkOpen(c,extraClass,extraStyle){
+  const inner=mkCard(c,extraClass,extraStyle,'');
+  return '<div class="flip-wrap"><div class="flip-inner done">'
+    +'<div class="flip-front">'+mkBack()+'</div>'
+    +'<div class="flip-back">'+inner+'</div>'
+    +'</div></div>';
+}
 function mkAvatar(idx,size){
   size=size||44;
   const i=idx||0;
@@ -196,7 +203,7 @@ function mkAvatar(idx,size){
 // flip cards after render
 function triggerFlips(){
   setTimeout(()=>{
-    document.querySelectorAll('.flip-inner').forEach(el=>{
+    document.querySelectorAll('.flip-inner:not(.done)').forEach(el=>{
       const delay=parseInt(el.style.transitionDelay)||0;
       setTimeout(()=>el.classList.add('done'),delay);
     });
@@ -506,19 +513,21 @@ function renderReveal(){
     const cl=ev.label.replace(/\s*\[.+\]/,'');
     const nm=ev.label.match(/\[(.+)\]/);
     const is5=ev.rank>=5&&ev.rank<=10;
+    const isNew=ri===revealedIds.length-1;
     let cardsSection='';
     if(!h||h.giveup){
       cardsSection='<div style="color:#aaa;font-size:13px;padding:8px 0;">已放弃出牌</div>';
     } else {
       const allC=is5?[...h.bottom,...h.top]:null;
       if(is5){
-        cardsSection='<div><div style="font-size:11px;color:#888;margin-bottom:6px;">5张牌型（全部）</div><div class="hand-row" style="margin:0;">'+allC.map((c,ci)=>mkFlip(c,'faceup highlight5',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120)).join('')+'</div></div>';
+        const cards=allC.map((c,ci)=>isNew?mkFlip(c,'faceup highlight5',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120):mkOpen(c,'faceup highlight5',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')).join('');
+        cardsSection='<div><div style="font-size:11px;color:#888;margin-bottom:6px;">5张牌型（全部）</div><div class="hand-row" style="margin:0;">'+cards+'</div></div>';
       } else {
-        const bCards=h.bottom.map((c,ci)=>mkFlip(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120)).join('');
-        const tCards=h.top.map((c,ci)=>mkFlip(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120+360)).join('');
-        cardsSection='<div style="display:flex;gap:14px;flex-wrap:wrap;">'
+        const bCards=h.bottom.map((c,ci)=>isNew?mkFlip(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120):mkOpen(c,'faceup',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')).join('');
+        const tCards=h.top.map((c,ci)=>isNew?mkFlip(c,'faceup top-card',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'',ci*120+380):mkOpen(c,'faceup top-card',isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')).join('');
+        cardsSection='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">'
           +'<div><div style="font-size:11px;color:#888;margin-bottom:6px;">下方（入场）</div><div class="hand-row" style="margin:0;">'+bCards+'</div></div>'
-          +'<div><div style="font-size:11px;color:#888;margin-bottom:6px;">上方（牌型）</div><div class="hand-row" style="margin:0;">'+tCards+'</div></div>'
+          +'<div><div style="font-size:11px;color:#888;margin-bottom:6px;">上方 ★ 决定牌型</div><div class="hand-row" style="margin:0;align-items:flex-end;">'+tCards+'</div></div>'
           +'</div>';
       }
     }
