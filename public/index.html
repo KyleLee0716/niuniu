@@ -190,12 +190,7 @@ function handleMsg(msg){
   }
   else if(type==='ROOM_UPDATE'){
     G.room=payload.room;
-    if(payload.room.phase==='lobby'){
-      G.screen='lobby';
-      G.confirmed={};G.delta={};G.vsLog=[];G.myHand=null;G.sel=[];G.alert5=null;
-      clearInterval(G.timer);
-    }
-    render();
+    if(G.screen==='lobby')render();
   }
   else if(type==='GAME_START'){
     clearInterval(G.timer);
