@@ -120,9 +120,17 @@ wss.on('connection', ws => {
 
     else if (type === 'NEXT_ROUND') {
       const room = rooms[ws.roomCode]; if (!room || room.host !== ws.playerId) return;
-      room.phase = 'lobby'; room.confirmed = {}; room.hands = {};
-      room.players.forEach(p => p.ready = false);
-      broadcastAll(room, { type: 'ROOM_UPDATE', payload: { room: sanitize(room) } });
+      const deck = makeDeck();
+      room.hands = {}; room.confirmed = {}; room.phase = 'arrange'; room.round++;
+      room.players.forEach(p => { p.ready = false; room.hands[p.id] = deck.splice(0, 5); });
+      room.clients.forEach(ws2 => {
+        if (ws2.readyState === WebSocket.OPEN) {
+          ws2.send(JSON.stringify({
+            type: 'GAME_START',
+            payload: { room: sanitize(room), myHand: room.hands[ws2.playerId] }
+          }));
+        }
+      });
     }
 
     else if (type === 'PING') {
