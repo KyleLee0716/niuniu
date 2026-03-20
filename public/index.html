@@ -31,7 +31,7 @@ button{padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weig
 .bg-blue{background:#E6F1FB;color:#0C447C;}
 .bg-purple{background:#EEEDFE;color:#3C3489;}
 .bg-amber{background:#FAEEDA;color:#854F0B;}
-.card-el{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:52px;height:72px;border-radius:8px;border:1.5px solid #ddd;background:#fff;font-size:14px;font-weight:600;cursor:pointer;user-select:none;transition:transform .15s,border-color .15s,background .15s;}
+.card-el{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:86px;border-radius:10px;border:1.5px solid #ddd;background:#fff;font-size:17px;font-weight:600;cursor:pointer;user-select:none;transition:transform .15s,border-color .15s,background .15s;}
 .card-el.red{color:#E24B4A;}
 .card-el.black{color:#1a1a1a;}
 .card-el.selected{border-color:#1D9E75;transform:translateY(-10px);background:#E1F5EE;}
@@ -336,7 +336,7 @@ function renderArrange(){
   const hand=G.myHand||[],sel=G.sel;
   let alert5Html='';
   if(G.alert5){
-    const cards=hand.map(c=>`<div class="card-el highlight5 faceup ${isRed(c)?'red':'black'}"><span style="font-size:11px;">${c.suit}</span>${c.rank}</div>`).join('');
+    const cards=hand.map(c=>`<div class="card-el highlight5 faceup ${isRed(c)?'red':'black'}"><span style="font-size:13px;">${c.suit}</span>${c.rank}</div>`).join('');
     alert5Html=`<div class="alert5-box">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
         <span style="font-size:15px;font-weight:600;color:#854F0B;">恭喜！检测到5张牌型</span>
@@ -354,7 +354,7 @@ function renderArrange(){
     const s=sel.includes(i),is36=cVal(c.rank)===3||cVal(c.rank)===6,isSA=isSpadeA(c);
     return`<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;">
       <div class="card-el ${isRed(c)?'red':'black'}${s?' selected':''}" style="${isSA?'border-color:#534AB7;':''}" onclick="toggleCard(${i})">
-        <span style="font-size:11px;">${c.suit}</span>${c.rank}
+        <span style="font-size:13px;">${c.suit}</span>${c.rank}
       </div>
       <span style="font-size:10px;color:${is36?'#0F6E56':isSA?'#534AB7':'transparent'};">${is36?'3↔6':isSA?'♠A':'-'}</span>
     </div>`;
@@ -459,8 +459,8 @@ function renderResult(){
           <b>${p.name}${isMe?' (我)':''}</b><span class="badge bg-red">放弃</span>
         </div></div>`;
     }
-    const bH=h.bottom.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:11px;">${c.suit}</span>${c.rank}</div>`).join('');
-    const tH=h.top.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:11px;">${c.suit}</span>${c.rank}</div>`).join('');
+    const bH=h.bottom.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:13px;">${c.suit}</span>${c.rank}</div>`).join('');
+    const tH=h.top.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:13px;">${c.suit}</span>${c.rank}</div>`).join('');
     return`<div class="card" style="${isMe?'border-color:#1D9E75;border-width:2px;':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
         <b>${p.name}${isMe?' (我)':''}</b>
