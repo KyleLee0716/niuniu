@@ -31,10 +31,10 @@ button{padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weig
 .bg-blue{background:#E6F1FB;color:#0C447C;}
 .bg-purple{background:#EEEDFE;color:#3C3489;}
 .bg-amber{background:#FAEEDA;color:#854F0B;}
-.card-el{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:86px;border-radius:10px;border:1.5px solid #ddd;background:#fff;font-size:17px;font-weight:600;cursor:pointer;user-select:none;transition:transform .15s,border-color .15s,background .15s;}
+.card-el{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:space-between;width:74px;height:104px;border-radius:10px;border:1.5px solid #ddd;background:#fff;font-size:16px;font-weight:700;cursor:pointer;user-select:none;transition:transform .15s,border-color .15s,background .15s;padding:5px 6px;position:relative;}
 .card-el.red{color:#E24B4A;}
 .card-el.black{color:#1a1a1a;}
-.card-el.selected{border-color:#1D9E75;transform:translateY(-10px);background:#E1F5EE;}
+.card-el.selected{border-color:#1D9E75;transform:translateY(-12px);background:#E1F5EE;box-shadow:0 4px 12px rgba(29,158,117,0.3);}
 .card-el.highlight5{border-color:#EF9F27;background:#FAEEDA;}
 .card-el.faceup{cursor:default;}
 .card-el.dim{opacity:.4;cursor:default;}
@@ -139,6 +139,23 @@ function cmpH(a,b){
   if(a.rank===3)return(a.pairIdx||0)-(b.pairIdx||0);
   if(a.niuSub!==undefined&&b.niuSub!==undefined)return a.niuSub-b.niuSub;
   return 0;
+}
+
+
+function cardHtml(c, extraClass='', extraStyle='', onclick='') {
+  const col = RED.includes(c.suit) ? 'red' : 'black';
+  const clickAttr = onclick ? `onclick="${onclick}"` : '';
+  return `<div class="card-el ${col} ${extraClass}" style="${extraStyle}" ${clickAttr}>
+    <div style="line-height:1;">
+      <div style="font-size:15px;font-weight:700;">${c.rank}</div>
+      <div style="font-size:13px;margin-top:-2px;">${c.suit}</div>
+    </div>
+    <div style="font-size:22px;line-height:1;align-self:center;">${c.suit}</div>
+    <div style="line-height:1;align-self:flex-end;transform:rotate(180deg);">
+      <div style="font-size:15px;font-weight:700;">${c.rank}</div>
+      <div style="font-size:13px;margin-top:-2px;">${c.suit}</div>
+    </div>
+  </div>`;
 }
 
 // ── State ──
@@ -352,10 +369,10 @@ function renderArrange(){
   }
   const cardEls=hand.map((c,i)=>{
     const s=sel.includes(i),is36=cVal(c.rank)===3||cVal(c.rank)===6,isSA=isSpadeA(c);
+    const extraClass=s?' selected':'';
+    const extraStyle=isSA?'border-color:#534AB7;border-width:2px;':'';
     return`<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;">
-      <div class="card-el ${isRed(c)?'red':'black'}${s?' selected':''}" style="${isSA?'border-color:#534AB7;':''}" onclick="toggleCard(${i})">
-        <span style="font-size:13px;">${c.suit}</span>${c.rank}
-      </div>
+      ${cardHtml(c, extraClass, extraStyle, `toggleCard(${i})`)}
       <span style="font-size:10px;color:${is36?'#0F6E56':isSA?'#534AB7':'transparent'};">${is36?'3↔6':isSA?'♠A':'-'}</span>
     </div>`;
   }).join('');
@@ -459,8 +476,8 @@ function renderResult(){
           <b>${p.name}${isMe?' (我)':''}</b><span class="badge bg-red">放弃</span>
         </div></div>`;
     }
-    const bH=h.bottom.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:13px;">${c.suit}</span>${c.rank}</div>`).join('');
-    const tH=h.top.map(c=>`<div class="card-el faceup ${isRed(c)?'red':'black'}${is5?' highlight5':''}" style="${isSpadeA(c)?'border-color:#534AB7;':''}"><span style="font-size:13px;">${c.suit}</span>${c.rank}</div>`).join('');
+    const bH=h.bottom.map(c=>cardHtml(c,'faceup'+(is5?' highlight5':''),isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')).join('');
+    const tH=h.top.map(c=>cardHtml(c,'faceup'+(is5?' highlight5':''),isSpadeA(c)?'border-color:#534AB7;border-width:2px;':'')).join('');
     return`<div class="card" style="${isMe?'border-color:#1D9E75;border-width:2px;':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
         <b>${p.name}${isMe?' (我)':''}</b>
