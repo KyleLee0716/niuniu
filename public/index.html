@@ -190,8 +190,12 @@ function handleMsg(msg){
   }
   else if(type==='ROOM_UPDATE'){
     G.room=payload.room;
-    if(G.screen==='lobby')render();
-    else if(G.screen==='waiting'||G.screen==='result'){G.room=payload.room;render();}
+    if(payload.room.phase==='lobby'){
+      G.screen='lobby';
+      G.confirmed={};G.delta={};G.vsLog=[];G.myHand=null;G.sel=[];G.alert5=null;
+      clearInterval(G.timer);
+    }
+    render();
   }
   else if(type==='GAME_START'){
     clearInterval(G.timer);
