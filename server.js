@@ -192,6 +192,9 @@ function evalHand(b3, t2) {
   const isStraight = ri[4]-ri[0] === 4 && new Set(ri).size === 5;
   const counts = {}; ranks.forEach(r => counts[r] = (counts[r]||0)+1);
   const cv = Object.values(counts).sort((a,b) => b-a);
+  const minSum = all.reduce((a,c) => a + cVal(c.rank), 0);
+  if (minSum < 10) return { label:'五小', mult:5, rank:11 };
+  if (ranks.every(r => ['J','Q','K'].includes(r))) return { label:'五皇', mult:5, rank:5 };
   if (cv[0] === 4) return { label:'四支', mult:5, rank:9 };
   if (cv[0] === 3 && cv[1] === 2) return { label:'葫芦', mult:5, rank:8 };
   if (isFlush && isStraight) return { label:'同花顺', mult:5, rank:10 };
