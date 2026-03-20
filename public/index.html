@@ -253,7 +253,7 @@ function handleMsg(msg){
     G.room=payload.room;G.myHand=payload.myHand;
     G.sel=[];G.alert5=null;G.showHint=false;G.showGiveup=false;
     G.confirmedIds=[];G.timeLeft=30;G.autoPlayed=false;
-    G.confirmed={};G.delta={};G.vsLog=[];G.revealIdx=0;G.revealDone=false;G.revealOrder=[];G.animatedSet=new Set();clearInterval(G.revealTimer);
+    G.confirmed={};G.delta={};G.vsLog=[];G.revealIdx=0;G.revealDone=false;G.revealOrder=[];G.animatedSet=new Set();clearInterval(G.revealTimer);G.handConfirmed=false;
     const t5=check5(G.myHand);if(t5){G.alert5=t5;G.sel=[0,1,2];}
     G.screen='arrange';render();
     G.timer=setInterval(()=>{
@@ -263,8 +263,23 @@ function handleMsg(msg){
       if(G.timeLeft<=0){clearInterval(G.timer);autoPlay();}
     },1000);
   }
-  else if(type==='CONFIRM_UPDATE'){G.confirmedIds=payload.confirmedIds;if(G.screen==='waiting')render();}
-  else if(type==='RESULT'){
+  else if(type==='CONFIRM_UPDATE'){
+    G.confirmedIds=payload.confirmedIds;
+    if(G.screen==='waiting'){
+      render();
+      // Safety: if all confirmed but RESULT hasn't arrived after 3s, it means server already sent RESULT before we were on waiting screen
+      if(payload.confirmedIds.length>=payload.total){
+        clearTimeout(G._resultTimeout);
+        G._resultTimeout=setTimeout(()=>{
+          if(G.screen==='waiting'){
+            // force re-request by reconnecting is complex; just show a retry button
+            toast('正在等待结算...');
+          }
+        },4000);
+      }
+    }
+  }
+  else if(type==='RESULT'){ clearTimeout(G._resultTimeout);
     clearInterval(G.timer);
     G.room=payload.room;G.confirmed=payload.confirmed;G.delta=payload.delta;G.vsLog=payload.vsLog;
     const ps=G.room.players;
@@ -286,6 +301,8 @@ function handleMsg(msg){
 }
 
 function autoPlay(){
+  if(G.handConfirmed)return;
+  G.handConfirmed=true;
   G.autoPlayed=true;
   const a=bestArr(G.myHand);
   if(a)send('CONFIRM_HAND',{bottom:a.bottom,top:a.top,giveup:false});
@@ -508,10 +525,10 @@ function renderArrange(){
 }
 function toggleCard(i){const s=G.sel,x=s.indexOf(i);if(x>=0)s.splice(x,1);else if(s.length<3)s.push(i);render();}
 function applyAuto(){const a=bestArr(G.myHand);if(a){G.sel=a.bottomIdx;G.showHint=false;render();}}
-function accept5(){clearInterval(G.timer);const h=G.myHand;send('CONFIRM_HAND',{bottom:[h[0],h[1],h[2]],top:[h[3],h[4]],giveup:false});G.screen='waiting';render();}
+function accept5(){if(G.handConfirmed)return;G.handConfirmed=true;clearInterval(G.timer);const h=G.myHand;send('CONFIRM_HAND',{bottom:[h[0],h[1],h[2]],top:[h[3],h[4]],giveup:false});G.screen='waiting';render();}
 function dismiss5(){G.alert5=null;G.sel=[];render();}
-function confirmHand(){clearInterval(G.timer);const hand=G.myHand,sel=G.sel;send('CONFIRM_HAND',{bottom:sel.map(i=>hand[i]),top:hand.filter((_,i)=>!sel.includes(i)),giveup:false});G.screen='waiting';render();}
-function doGiveup(){clearInterval(G.timer);send('CONFIRM_HAND',{giveup:true});G.screen='waiting';render();}
+function confirmHand(){if(G.handConfirmed)return;G.handConfirmed=true;clearInterval(G.timer);const hand=G.myHand,sel=G.sel;send('CONFIRM_HAND',{bottom:sel.map(i=>hand[i]),top:hand.filter((_,i)=>!sel.includes(i)),giveup:false});G.screen='waiting';render();}
+function doGiveup(){if(G.handConfirmed)return;G.handConfirmed=true;clearInterval(G.timer);send('CONFIRM_HAND',{giveup:true});G.screen='waiting';render();}
 
 function renderWaiting(){
   const done=G.confirmedIds.length,total=G.room&&G.room.players.length||1;
