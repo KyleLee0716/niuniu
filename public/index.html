@@ -119,6 +119,11 @@ function check5(hand){
   const isStraight=ri[4]-ri[0]===4&&new Set(ri).size===5;
   const counts={};ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
   const cv=Object.values(counts).sort((a,b)=>b-a);
+  // 五小：5张点数总和 < 10（每张取最小值，3不换6）
+  const minSum=hand.reduce((a,c)=>a+cVal(c.rank),0);
+  if(minSum<10)return'五小';
+  // 五皇：5张全是J/Q/K
+  if(ranks.every(r=>['J','Q','K'].includes(r)))return'五皇';
   if(isFlush&&isStraight)return'同花顺';
   if(cv[0]===4)return'四支';
   if(cv[0]===3&&cv[1]===2)return'葫芦';
@@ -133,6 +138,9 @@ function evalHand(b3,t2){
   const isStraight=ri[4]-ri[0]===4&&new Set(ri).size===5;
   const counts={};ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
   const cv=Object.values(counts).sort((a,b)=>b-a);
+  const minSum=hand.reduce((a,c)=>a+cVal(c.rank),0);
+  if(minSum<10)return{label:'五小',mult:5,rank:11};
+  if(ranks.every(r=>['J','Q','K'].includes(r)))return{label:'五皇',mult:5,rank:5};
   if(cv[0]===4)return{label:'四支',mult:5,rank:9};
   if(cv[0]===3&&cv[1]===2)return{label:'葫芦',mult:5,rank:8};
   if(isFlush&&isStraight)return{label:'同花顺',mult:5,rank:10};
@@ -156,8 +164,9 @@ function cmpH(a,b){
 function bestArr(hand){
   const t5=check5(hand);
   if(t5){
-    const rank=t5==='同花顺'?10:t5==='四支'?9:t5==='葫芦'?8:t5==='同花'?6:5;
-    return{label:t5,mult:5,rank,bottom:[hand[0],hand[1],hand[2]],top:[hand[3],hand[4]],bottomIdx:[0,1,2]};
+    const rankMap5={'同花顺':10,'四支':9,'葫芦':8,'同花':6,'顺子':5,'五皇':5,'五小':11};
+    const multMap5={'同花顺':5,'四支':5,'葫芦':5,'同花':5,'顺子':5,'五皇':5,'五小':5};
+    return{label:t5,mult:multMap5[t5]||5,rank:rankMap5[t5]||5,bottom:[hand[0],hand[1],hand[2]],top:[hand[3],hand[4]],bottomIdx:[0,1,2]};
   }
   let best=null;
   for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)for(let k=j+1;k<5;k++){
