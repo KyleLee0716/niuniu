@@ -72,6 +72,9 @@ wss.on('connection', ws => {
       const room = rooms[payload.code];
       if (!room) { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '找不到房间' } })); return; }
       if (room.phase !== 'lobby') { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '游戏已开始' } })); return; }
+      // Prevent duplicate: check if same name already in room
+      const existing = room.players.find(p => p.name === payload.name);
+      if (existing) { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '该名字已在房间内，请换个名字' } })); return; }
       if (room.players.length >= 10) { ws.send(JSON.stringify({ type: 'ERROR', payload: { msg: '房间已满' } })); return; }
       room.clients.add(ws);
       ws.roomCode = payload.code;
@@ -142,6 +145,17 @@ wss.on('connection', ws => {
       broadcastAll(room, { type: 'CHAT', payload: { id: ws.playerId, name: p.name, avatar: p.avatar || 0, text: payload.text } });
     }
 
+    else if (type === 'KICK_PLAYER') {
+      const room = rooms[ws.roomCode]; if (!room || room.host !== ws.playerId) return;
+      const kickId = payload.playerId;
+      if (kickId === ws.playerId) return; // can't kick yourself
+      // Remove from players list
+      room.players = room.players.filter(p => p.id !== kickId);
+      // Remove their client connection
+      room.clients.forEach(c => { if (c.playerId === kickId) { c.send(JSON.stringify({ type: 'KICKED', payload: {} })); room.clients.delete(c); } });
+      broadcastAll(room, { type: 'ROOM_UPDATE', payload: { room: sanitize(room) } });
+    }
+
     else if (type === 'PING') {
       ws.send(JSON.stringify({ type: 'PONG' }));
     }
@@ -153,6 +167,19 @@ wss.on('connection', ws => {
     room.players = room.players.filter(p => p.id !== ws.playerId);
     if (room.players.length === 0) { delete rooms[ws.roomCode]; return; }
     if (room.host === ws.playerId && room.players.length > 0) room.host = room.players[0].id;
+    // If game in progress and disconnected player hadn't confirmed, auto-giveup for them
+    if (room.phase === 'arrange' && !room.confirmed[ws.playerId]) {
+      room.confirmed[ws.playerId] = { giveup: true };
+      // Check if all remaining players have confirmed
+      if (Object.keys(room.confirmed).length >= room.players.length) {
+        const result = settle(room);
+        room.players.forEach(p => p.chips += result.delta[p.id] || 0);
+        room.phase = 'result';
+        broadcastAll(room, { type: 'RESULT', payload: { room: sanitize(room), confirmed: room.confirmed, delta: result.delta, vsLog: result.vsLog } });
+        return;
+      }
+      broadcastAll(room, { type: 'CONFIRM_UPDATE', payload: { confirmedIds: Object.keys(room.confirmed), total: room.players.length } });
+    }
     broadcastAll(room, { type: 'ROOM_UPDATE', payload: { room: sanitize(room) } });
   });
 });
