@@ -433,20 +433,30 @@ function renderLobby(){
   const r=G.room,amHost=r.host===myId;
   const allReady=r.players.length>=2&&r.players.every(p=>p.ready);
   const me=r.players.find(p=>p.id===myId);
-  const rows=r.players.map(p=>'<div class="player-row">'
-    +mkAvatar(p.avatar||0)
-    +'<div style="flex:1;"><div style="font-weight:600;">'+p.name+(p.id===myId?' <span class="badge bg-blue" style="font-size:11px;">我</span>':'')+(p.id===r.host?' <span class="badge bg-gold" style="font-size:11px;">房主</span>':'')+'</div>'
-    +'<div style="font-size:12px;color:#888;">'+(p.chips||500)+' 筹码</div></div>'
-    +'<span class="badge '+(p.ready?'bg-green':'bg-gray')+'">'+(p.ready?'已准备':'等待中')+'</span>'
-    +(amHost&&p.id!==myId?'<button onclick="kickPlayer(\"'+p.id+'\")" style="margin-left:8px;padding:4px 10px;border-radius:8px;border:1px solid #E24B4A;background:#fff;color:#E24B4A;font-size:12px;cursor:pointer;">踢出</button>':'')
-    +'</div>').join('');
+  const rows=r.players.map(p=>{
+    return '<div class="player-row">'
+      +mkAvatar(p.avatar||0)
+      +'<div style="flex:1;"><div style="font-weight:600;">'+p.name
+      +(p.id===myId?' <span class="badge bg-blue" style="font-size:11px;">我</span>':'')
+      +(p.id===r.host?' <span class="badge bg-gold" style="font-size:11px;">房主</span>':'')
+      +'</div><div style="font-size:12px;color:#888;">'+(p.chips||500)+' 筹码</div></div>'
+      +'<span class="badge '+(p.ready?'bg-green':'bg-gray')+'">'+(p.ready?'已准备':'等待中')+'</span>'
+      +(amHost&&p.id!==myId?'<button onclick="kickPlayer(\''+p.id+'\');" style="margin-left:8px;padding:4px 10px;border-radius:8px;border:1px solid #E24B4A;background:#fff;color:#E24B4A;font-size:12px;cursor:pointer;">踢出</button>':'')
+      +'</div>';
+  }).join('');
+  return '<div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
     +'<div><h1>牛牛</h1><p class="sub">房间 '+r.code+'</p></div>'
     +'<div class="room-code" style="font-size:22px;letter-spacing:4px;padding:0;">'+r.code+'</div></div>'
     +'<div class="card"><div class="card-title">分享房间码给朋友</div>'
     +'<div class="room-code">'+r.code+'</div>'
     +'<button class="btn-outline btn-small" style="margin-top:6px;" onclick="copyCode()">复制链接</button></div>'
     +'<div class="card"><div class="card-title">玩家（'+r.players.length+'人）</div>'+rows+'</div>'
-    +(amHost?'<div class="card"><div class="card-title">房主设置</div><div style="display:flex;gap:12px;margin-bottom:4px;"><div style="flex:1;"><div style="font-size:12px;color:#888;margin-bottom:4px;">底注筹码</div><input id="betSet" type="number" value="'+(r.bet||10)+'" min="1" style="margin:0;"></div><div style="flex:1;"><div style="font-size:12px;color:#888;margin-bottom:4px;">起始筹码</div><input id="chipsSet" type="number" value="'+(r.startChips||500)+'" min="10" style="margin:0;"></div></div></div>':'')
+    +(amHost?'<div class="card"><div class="card-title">房主设置</div>'
+      +'<div style="display:flex;gap:12px;margin-bottom:4px;">'
+      +'<div style="flex:1;"><div style="font-size:12px;color:#888;margin-bottom:4px;">底注筹码</div><input id="betSet" type="number" value="'+(r.bet||10)+'" min="1" style="margin:0;"></div>'
+      +'<div style="flex:1;"><div style="font-size:12px;color:#888;margin-bottom:4px;">起始筹码</div><input id="chipsSet" type="number" value="'+(r.startChips||500)+'" min="10" style="margin:0;"></div>'
+      +'</div></div>':'')
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
     +(!me||!me.ready?'<button class="btn-green" style="flex:1;" onclick="setReady()">我已准备</button>':'<span class="badge bg-green" style="padding:12px 20px;font-size:14px;">已准备 ✓</span>')
     +(amHost&&allReady?'<button class="btn-green" style="flex:1;background:#534AB7;" onclick="startGame()">开始游戏</button>':'')
