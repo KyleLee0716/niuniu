@@ -88,7 +88,7 @@ button{padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weig
 const RO=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const PAIR_ORDER=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const RED_SUITS=['♥','♦'];
-const AVATARS=['🐱','🐶','🐼','🦊','🐯','🐻','🐸','🦁','🐮','🺺'];
+const AVATARS=['🐱','🐶','🐼','🦊','🐯','🐻','🐸','🦁','🐮','🐝'];
 const AV_BG=['#FFE0E0','#FFE8D0','#E0F0FF','#F0FFE0','#FFE0FF','#E0FFFF','#FFF0E0','#E8E0FF','#FFE0E8','#E0FFE8'];
 
 function cVal(r){if(['J','Q','K'].includes(r))return 10;if(r==='A')return 1;return parseInt(r);}
@@ -389,14 +389,19 @@ function launchConfetti(){
 }
 
 function render(){
-  document.getElementById('app').innerHTML=
-    G.screen==='home'?renderHome():
-    G.screen==='lobby'?renderLobby():
-    G.screen==='arrange'?renderArrange():
-    G.screen==='waiting'?renderWaiting():
-    G.screen==='reveal'?renderReveal():
-    '';
-  renderChat();
+  try{
+    document.getElementById('app').innerHTML=
+      G.screen==='home'?renderHome():
+      G.screen==='lobby'?renderLobby():
+      G.screen==='arrange'?renderArrange():
+      G.screen==='waiting'?renderWaiting():
+      G.screen==='reveal'?renderReveal():
+      '';
+    renderChat();
+  }catch(e){
+    document.getElementById('app').innerHTML='<div style="padding:20px;color:red;font-size:13px;">Error: '+e.message+'</div>';
+    console.error('render error:',e);
+  }
 }
 
 function renderHome(){
