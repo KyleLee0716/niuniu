@@ -79,7 +79,7 @@ wss.on('connection', ws => {
       room.clients.add(ws);
       ws.roomCode = payload.code;
       room.players.push({ id: ws.playerId, name: payload.name, chips: payload.chips || 500, ready: false, avatar: payload.avatar || 0 });
-      ws.send(JSON.stringify({ type: 'ROOM_JOINED', payload: { room: sanitize(room) } }));
+      ws.send(JSON.stringify({ type: 'ROOM_JOINED', payload: { room: sanitize(room), myId: ws.playerId } }));
       broadcast(room, { type: 'ROOM_UPDATE', payload: { room: sanitize(room) } }, ws);
     }
 
